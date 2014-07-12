@@ -21,6 +21,7 @@
 		28AF7E641970B86600EA07FD /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28AF7E461970B86500EA07FD /* UIKit.framework */; };
 		28AF7E6C1970B86600EA07FD /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 28AF7E6A1970B86600EA07FD /* InfoPlist.strings */; };
 		28AF7E6E1970B86600EA07FD /* ShaunMerritt_AfterburnerApplicationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 28AF7E6D1970B86600EA07FD /* ShaunMerritt_AfterburnerApplicationTests.m */; };
+		28AF7E791970C14300EA07FD /* SMRateMoviesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 28AF7E781970C14300EA07FD /* SMRateMoviesViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,8 @@
 		28AF7E691970B86600EA07FD /* ShaunMerritt_AfterburnerApplicationTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ShaunMerritt_AfterburnerApplicationTests-Info.plist"; sourceTree = "<group>"; };
 		28AF7E6B1970B86600EA07FD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		28AF7E6D1970B86600EA07FD /* ShaunMerritt_AfterburnerApplicationTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ShaunMerritt_AfterburnerApplicationTests.m; sourceTree = "<group>"; };
+		28AF7E771970C14300EA07FD /* SMRateMoviesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SMRateMoviesViewController.h; sourceTree = "<group>"; };
+		28AF7E781970C14300EA07FD /* SMRateMoviesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SMRateMoviesViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +120,7 @@
 				28AF7E541970B86500EA07FD /* Main.storyboard */,
 				28AF7E571970B86500EA07FD /* SMViewController.h */,
 				28AF7E581970B86500EA07FD /* SMViewController.m */,
+				28AF7E7A1970C14A00EA07FD /* Rate Movies Controller */,
 				28AF7E5A1970B86500EA07FD /* Images.xcassets */,
 				28AF7E491970B86500EA07FD /* Supporting Files */,
 			);
@@ -150,6 +154,15 @@
 				28AF7E6A1970B86600EA07FD /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		28AF7E7A1970C14A00EA07FD /* Rate Movies Controller */ = {
+			isa = PBXGroup;
+			children = (
+				28AF7E771970C14300EA07FD /* SMRateMoviesViewController.h */,
+				28AF7E781970C14300EA07FD /* SMRateMoviesViewController.m */,
+			);
+			name = "Rate Movies Controller";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -251,6 +264,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				28AF7E531970B86500EA07FD /* SMAppDelegate.m in Sources */,
+				28AF7E791970C14300EA07FD /* SMRateMoviesViewController.m in Sources */,
 				28AF7E591970B86500EA07FD /* SMViewController.m in Sources */,
 				28AF7E4F1970B86500EA07FD /* main.m in Sources */,
 			);
