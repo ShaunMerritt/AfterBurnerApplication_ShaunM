@@ -22,5 +22,5 @@
 - (IBAction)userRatingNotSeenButtonClicked:(id)sender;
 - (IBAction)userRatingDontLikeButtonClicked:(id)sender;
 
-
+@property (nonatomic, strong) NSDictionary *weather;
 @end
