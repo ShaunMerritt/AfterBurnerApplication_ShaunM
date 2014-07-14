@@ -1,0 +1,5 @@
+#import <Foundation/Foundation.h>
+@interface PodsDummy_Pods_ShaunMerritt_AfterburnerApplication_MDCSwipeToChoose : NSObject
+@end
+@implementation PodsDummy_Pods_ShaunMerritt_AfterburnerApplication_MDCSwipeToChoose
+@end

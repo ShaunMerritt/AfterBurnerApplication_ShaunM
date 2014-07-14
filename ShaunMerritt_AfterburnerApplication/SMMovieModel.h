@@ -7,8 +7,9 @@
 //
 
 #import "JSONModel.h"
+#import "SMPhotoModel.h"
 
-@protocol SMMovieModel @end
+//@protocol SMMovieModel @end
 
 @interface SMMovieModel : JSONModel
 
@@ -16,5 +17,8 @@
 @property (strong, nonatomic) NSString* title;
 @property (strong, nonatomic) NSString* year;
 @property (strong, nonatomic) NSString* mpaa_rating;
+@property (strong, nonatomic) NSString* id;
+//@property (strong, nonatomic) SMPhotoModel* photo;
+@property (strong, nonatomic) SMPhotoModel* posters;
 
 @end

@@ -11,6 +11,6 @@
 
 @interface SMRottenTomatoesFeed : JSONModel
 
-@property (strong, nonatomic) NSArray<SMMovieModel>* Movies;
+@property (strong, nonatomic) NSArray* movies;
 
 @end
