@@ -8,7 +8,12 @@
 
 #import <UIKit/UIKit.h>
 
-@interface SMRateMoviesViewController : UIViewController
+@interface SMRateMoviesViewController : UIViewController {
+    NSArray *movieObjectsArray;
+    NSArray *similarMovieImdbArray;
+
+
+}
 
 
 // Declare the info card view's properties
@@ -17,6 +22,21 @@
 @property (weak, nonatomic) IBOutlet UIImageView *infoCardImage;
 @property (weak, nonatomic) IBOutlet UILabel *infoCardMovieName;
 @property (weak, nonatomic) IBOutlet UILabel *infoCardMovieRating;
+@property (nonatomic, retain) NSArray *movieObjectsArray;
+@property (nonatomic, retain) NSArray *similarMovieObjectsArray;
+@property (nonatomic, retain) NSArray *similarMovieByCastArray;
+@property (nonatomic, retain) NSArray *similarMovieImdbArray;
+@property (nonatomic) NSNumber *runtime;
+@property (nonatomic) NSString *mpaa_rating;
+@property (nonatomic) BOOL *swipedYes;
+
+
+
+
+
+
+
+@property (nonatomic, retain) NSString *similarMovieId;
 
 //@property (nonatomic, strong) SMInfoMovieCardView *frontCardView;
 

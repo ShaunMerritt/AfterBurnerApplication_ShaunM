@@ -7,12 +7,39 @@
 //
 
 #import "SMAppDelegate.h"
+#import "SMRateMoviesViewController.h"
+#import "NetworkEngine.h"
+
 
 @implementation SMAppDelegate
+@synthesize networkEngine;
+@synthesize favoriteMpaa_rating;
+@synthesize favoriteRunTimes;
+@synthesize minutesToBeWithin;
+
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     // Override point for customization after application launch.
+    minutesToBeWithin = 30;
+    
+    
+        
+    /* NETWORK SETUP */
+    NSMutableDictionary *headerFields = [NSMutableDictionary dictionary];
+    [headerFields setValue:@"iOS" forKey:@"x-client-identifier"];
+    
+    self.networkEngine = [[NetworkEngine alloc]
+                          initWithHostName:kBaseURL
+                          customHeaderFields:nil];
+    [self.networkEngine useCache];
+    
+    self.imdbNetworkEngine = [[NetworkEngine alloc]
+                              initWithHostName:@"www.imdb.com/xml/find?json=1&nr=1&nm=on&q="
+                              customHeaderFields:nil];
+    [self.imdbNetworkEngine useCache];
+
+    
     return YES;
 }
 							

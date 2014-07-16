@@ -7,13 +7,14 @@
 //
 
 #import "SMRateMoviesViewController.h"
+#import "SMAppDelegate.h"
 #import "JSONModelLib.h"
-#import "SMRottenTomatoesFeed.h"
-#import "SMMovieModel.h"
 #import "SMOverlayView.h"
 #import "UIImageView+AFNetworking.h"
-#import "SMPhotoModel.h"
 #import <Foundation/Foundation.h>
+#import "SMMovie.h"
+#import "SMMovieSimilar.h"
+#import "SMConstants.h"
 
 
 
@@ -31,17 +32,32 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
 @property (nonatomic, strong) UIPanGestureRecognizer *panGestureRecognizer;
 @property(nonatomic, strong) SMOverlayView *overlayView;
 @property (nonatomic, strong) NSArray *movies;
+
 @property (nonatomic, strong) NSArray *suggestedMovies;
 
 @property (nonatomic) int currentMovieIndex;
+@property (nonatomic) int currentSuggestedMovieIndex;
 //@property(nonatomic, strong) id movie;
-@property (nonatomic, strong) SMMovieModel *movie;
-@property (nonatomic, strong) SMPhotoModel *posters;
-@property (nonatomic) BOOL *isLikedByUser;
+@property (nonatomic) BOOL suggestedMovieIsLikedByUser;
+@property (nonatomic) BOOL isLikedByUser;
+@property (nonatomic) BOOL haventSeenButtonPressedBool;
+
 
 @end
 
 @implementation SMRateMoviesViewController
+
+@synthesize infoCardView;
+@synthesize infoCardImage;
+@synthesize infoCardMovieName;
+@synthesize infoCardMovieRating;
+@synthesize movieObjectsArray;
+@synthesize similarMovieObjectsArray;
+@synthesize similarMovieId;
+@synthesize similarMovieByCastArray;
+@synthesize similarMovieImdbArray;
+@synthesize swipedYes;
+
 
 #pragma mark Lifecycle
 
@@ -54,18 +70,39 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
     return self;
 }
 
+
 - (void)viewDidLoad
 {
     
     [super viewDidLoad];
     
-    self.likeButton.enabled        = NO;
-    self.dontLikeButton.enabled  = NO;
-    //self.haveNotSeenButton.enabled = NO;
-
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Welcome!" message:@"This is a list of the most popular dvd rentals at the moment. Swipe right on the picture to like it, or swipe left to dislike. Similarly, you can click the 'Like' and 'Dislike' buttons at the bottom of the screen. There are 10 movies to rate." delegate:nil cancelButtonTitle:@"Got it!" otherButtonTitles: nil];
+    [alert show];
+    
     self.currentMovieIndex         = 0;
+    self.currentSuggestedMovieIndex = 0;
+    
+    ApplicationDelegate.favoriteRunTimes = [[NSMutableArray alloc] init];
+    ApplicationDelegate.favoriteMpaa_rating = [[NSMutableArray alloc] init];
+    
+    [ApplicationDelegate.networkEngine getMovieByCurrentDVDS:^(NSArray *responseArray) {
+        
+        movieObjectsArray = responseArray;
+        //[tableView reloadData];
+        
+        [self queryForCurrentMovieIndex];
+
+        
+    }
+                                                     onError:^(NSError* error) {
+                                                         NSLog(@"%@\t%@\t%@\t%@", [error localizedDescription], [error localizedFailureReason],
+                                                              [error localizedRecoveryOptions], [error localizedRecoverySuggestion]);
+                                                     }];
+
+    
     
     [self setUpViews];
+    
     
     // Add a gesture recognizer to the infoCardView
     self.panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragged:)];
@@ -87,7 +124,7 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
     [self addShadowForView:self.userRatingView];
     
     // Create string containign the full URL, then use that to make the NSURLRequest
-    NSString *string = [NSString stringWithFormat:@"%@lists/dvds/top_rentals.json?apikey=9htuhtcb4ymusd73d4z6jxcj", BaseURLString];
+    NSString *string = [NSString stringWithFormat:@"%@lists/dvds/top_rentals.json?apikey=%@", BaseURLString, kAPIKey];
     NSURL *url = [NSURL URLWithString:string];
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     
@@ -99,11 +136,10 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
     [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
         
         // 3
-        [self didReceiveJSON: responseObject];
         
         self.weather = (NSDictionary *)responseObject;
-        self.title = @"JSON Retrieved";
-        //NSLog(@"%@",self.weather);
+        //self.title = @"JSON Retrieved";
+        
         
         
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
@@ -122,36 +158,6 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
     
 }
 
-- (void) didReceiveJSON: (NSDictionary *)obj {
-    
-    // Create an array of the results of all the data in the movies keypath
-    NSArray* results = obj[@"movies"];
-    
-    @try {
-        _movies = [SMMovieModel arrayOfModelsFromDictionaries:results];
-    }
-    @catch (NSException *exception) {
-        // Handle Error here
-        NSLog(@"Error");
-    }
-    
-    NSLog(@"%@", _movies);
-    
-    [self queryForCurrentMovieIndex];
-    
-    // You can access the properties from the SMMovieModel class like so:
-    //SMMovieModel* movie = _movies[0];
-    
-    //NSArray* test = results[@"photo"];
-    
-    NSLog(@"%@",_movie.posters.profile);
-    //NSLog([NSString stringWithFormat:@"%@", movie.title]);
-    
-    //SMMovieModel* movie = _movies[0];
-    
-
-    
-}
 
 - (void) addShadowForView: (UIView *)view {
     
@@ -189,98 +195,43 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
 
 
 - (IBAction)userRatingLikeButtonClicked:(id)sender {
+    
+    [self choseLiked];
+    
 }
 
 - (IBAction)userRatingNotSeenButtonClicked:(id)sender {
     
-    // Create string containign the full URL, then use that to make the NSURLRequest
-    NSString *string = [NSString stringWithFormat:@"%@movies/%@/similar.json?limit=1&apikey=9htuhtcb4ymusd73d4z6jxcj", BaseURLString, _movie.id];
-    NSLog(@"%@", string);
-    NSURL *url = [NSURL URLWithString:string];
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
+    _haventSeenButtonPressedBool = YES;
     
-    // Create an request operation, set response type to JSON
-    AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
-    operation.responseSerializer = [AFJSONResponseSerializer serializer];
-    
-    // JSON serializer parses the received data and stores in the dictionary responseObject
-    [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-        
-        // 3
-        [self didReceiveJSONForSimilarMovie: responseObject];
-        
-        self.weather = (NSDictionary *)responseObject;
-        self.title = @"JSON Retrieved";
-        NSLog(@"%@",self.weather);
-        
-        
-    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-        // Show errors here
-        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error Retrieving Weather"
-                                                            message:[error localizedDescription]
-                                                           delegate:nil
-                                                  cancelButtonTitle:@"Ok"
-                                                  otherButtonTitles:nil];
-        [alertView show];
-    }];
-    
-    // Tell the operation to start
-    [operation start];
+    SMMovie *thisMovie;
+    thisMovie = (SMMovie*)movieObjectsArray[self.currentMovieIndex];
 
+    ApplicationDelegate.similarMovieId = thisMovie.id;
+    
+        
+    [ApplicationDelegate.networkEngine getSimilarMoviesList:^(NSArray *responseArray) {
+        similarMovieObjectsArray = responseArray;
+        //[tableView reloadData];
+        
+        [self queryForCurrentMovieIndex];
+        
+        
+    }
+                                                     onError:^(NSError* error) {
+                                                         NSLog(@"%@\t%@\t%@\t%@", [error localizedDescription], [error localizedFailureReason],
+                                                               [error localizedRecoveryOptions], [error localizedRecoverySuggestion]);
+                                                     }];
+    
 }
 
-- (void) didReceiveJSONForSimilarMovie: (NSDictionary *)obj {
-    
-    // Create an array of the results of all the data in the movies keypath
-    NSArray* results = obj[@"movies"];
-    
-    @try {
-        _suggestedMovies = [SMMovieModel arrayOfModelsFromDictionaries:results];
-    }
-    @catch (NSException *exception) {
-        // Handle Error here
-        NSLog(@"Error");
-    }
-    
-    NSLog(@"%@", _suggestedMovies);
-    
-    [self queryForCurrentMovieIndex];
-    
-    // You can access the properties from the SMMovieModel class like so:
-    //SMMovieModel* movie = _movies[0];
-    
-    //NSArray* test = results[@"photo"];
-    
-    NSLog(@"%@",_movie.posters.profile);
-    //NSLog([NSString stringWithFormat:@"%@", movie.title]);
-    
-    //SMMovieModel* movie = _movies[0];
-    
-    
-    
-    
-    NSURL *url = _movie.posters.profile;
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    UIImage *placeholderImage = [UIImage imageNamed:@"placeholder"];
-    
-    
-    
-    [self.infoCardImage setImageWithURLRequest:request
-                              placeholderImage:placeholderImage
-                                       success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
-                                           
-                                           self.infoCardImage.image = image;
-                                           [self.infoCardImage setNeedsLayout];
-                                           
-                                       } failure:nil];
 
-    
-    
-    
-}
 
 
 - (IBAction)userRatingDontLikeButtonClicked:(id)sender {
+    
+    [self choseDislike];
+    
 }
 
 
@@ -314,56 +265,23 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
         };
         case UIGestureRecognizerStateEnded: {
             
-            NSLog(@"%f", xDistance);
+           
             
             if (xDistance > 146) {
-                NSLog(@"Liked");
-                /*
-                [UIView beginAnimations:@"animateView" context:nil];
-                [UIView setAnimationDuration:0.5];
+                swipedYes = YES;
+                [self choseLiked];
                 
                 
-                CGRect viewFrame = [self.infoCardView frame];
-                viewFrame.origin.x = 480;
-                self.infoCardView.frame = viewFrame;
-                
-                self.infoCardView.alpha = 0.5;
-                [self.view addSubview:self.infoCardView];
-                [UIView commitAnimations];
-                
-                */
-                [UIView animateWithDuration:0.5 animations:^{
-                    self.infoCardView.center = CGPointMake(self.originalPoint.x + xDistance + 300, self.originalPoint.y + yDistance);
-                    self.overlayView.alpha = 0;
-                } completion:^(BOOL finished) {
-                    
-                    self.infoCardView.alpha = 0;
-                    [self resetViewPositionAndTransformations];
-                    [self setUpNextMovie];
-                }];
-                
-                [self choseOne];
             }
             
             if (xDistance < -146) {
-                NSLog(@"Disliked");
-                [UIView beginAnimations:@"animateView" context:nil];
-                [UIView setAnimationDuration:0.5];
                 
-                
-                CGRect viewFrame = [self.infoCardView frame];
-                viewFrame.origin.x = -480;
-                self.infoCardView.frame = viewFrame;
-                
-                self.infoCardView.alpha = 0.5;
-                [self.view addSubview:self.infoCardView];
-                [UIView commitAnimations];
+                swipedYes = YES;
 
-                [self choseOne];
+                [self choseDislike];
             }
             
             if (xDistance >= -146 && xDistance <= 146) {
-                NSLog(@"Cant decide");
                 [self resetViewPositionAndTransformations];
                 
             }
@@ -377,9 +295,68 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
     
 }
 
+- (void) choseLiked {
+    
+    if (swipedYes == NO) {
+        self.originalPoint = self.infoCardView.center;
+    }
+
+    
+    [UIView animateWithDuration:0.5 animations:^{
+        self.infoCardView.center = CGPointMake(self.originalPoint.x + 160 + 300, self.originalPoint.y + 20);
+        self.overlayView.alpha = 0;
+    } completion:^(BOOL finished) {
+        
+        self.infoCardView.alpha = 0;
+        [self resetViewPositionAndTransformations];
+        [self setUpNextMovie];
+    }];
+    
+   
+    [ApplicationDelegate.favoriteMpaa_rating addObject:[NSString stringWithFormat:@"%@", self.mpaa_rating]];
+    [ApplicationDelegate.favoriteRunTimes addObject:self.runtime];
+    
+    
+    
+    
+    [self choseOne];
+}
+
+- (void) choseDislike {
+    
+    if (swipedYes == NO) {
+        self.originalPoint = self.infoCardView.center;
+    }
+
+    if ([ApplicationDelegate.favoriteRunTimes count] == 0 && [self.infoCardMovieName.text isEqualToString:@"Jack Ryan: Shadow Recruit"]) {
+        [self choseLiked];
+        
+        
+    } else {
+    
+    [UIView animateWithDuration:0.5 animations:^{
+        self.infoCardView.center = CGPointMake(self.originalPoint.x - 160 - 300, self.originalPoint.y - 20);
+        self.overlayView.alpha = 0;
+    } completion:^(BOOL finished) {
+        
+        self.infoCardView.alpha = 0;
+        [self resetViewPositionAndTransformations];
+        [self setUpNextMovie];
+    }];
+    
+    
+    }
+    [self choseOne];
+}
+
 - (void) choseOne {
     
     // Add code here for what to do after the decision was made
+    if (_haventSeenButtonPressedBool == YES) {
+        _haventSeenButtonPressedBool = NO;
+    }
+    
+    
     
     // Add a gesture recognizer to the infoCardView
     self.panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dragged:)];
@@ -426,42 +403,101 @@ static NSString * const BaseURLString = @"http://api.rottentomatoes.com/api/publ
 
 
 - (void) queryForCurrentMovieIndex {
-    if ([self.movies count] > 0) {
-        self.movie = self.movies[_currentMovieIndex];
-        _movie = _movies[_currentMovieIndex];
-        self.infoCardMovieName.text = [NSString stringWithFormat:@"%@", _movie.title];
-        self.infoCardMovieRating.text = [NSString stringWithFormat:@"%@", _movie.mpaa_rating];
-        //_movie.moviePoster.profile
-        NSLog(@"%@", _movie.title);
+    
+    if (_haventSeenButtonPressedBool == NO) {
+        
+        // Configure the cell...
+        SMMovie *thisMovie;
+        
+        thisMovie = (SMMovie*)movieObjectsArray[self.currentMovieIndex];
+        
+        self.mpaa_rating = thisMovie.mpaa_rating;
+        self.runtime = thisMovie.runtime;
+        
+        infoCardMovieRating.text = thisMovie.mpaa_rating;
+        infoCardMovieName.text = thisMovie.title;
         
         
-        NSLog(@"%@", _movie.posters.profile);
-        
-        NSURL *url = _movie.posters.profile;
-        NSURLRequest *request = [NSURLRequest requestWithURL:url];
-        UIImage *placeholderImage = [UIImage imageNamed:@"placeholder"];
+        NSURL *thisMoviePosterURL = thisMovie.moviePosterURL;
         
         
+        ApplicationDelegate.linkToCurrentMovie = [NSString stringWithFormat:@"%@%@", thisMovie.links,kEnding];
+
+        [ApplicationDelegate.networkEngine imageAtURL:thisMoviePosterURL completionHandler:^(UIImage *fetchedImage, NSURL *fetchedURL, BOOL isInCache) {
+            NSLog(@"fetchedURL: %@", [fetchedURL absoluteString]);
+            NSLog(@"thisMoviePosterURL: %@", [thisMoviePosterURL absoluteString]);
+            if(thisMoviePosterURL == fetchedURL)
+            {
+                
+                infoCardImage.image = fetchedImage;
+            }
+            
+        } errorHandler:^(MKNetworkOperation *completedOperation, NSError *error) {
+            //code
+        }];
+    } else {
         
-        [self.infoCardImage setImageWithURLRequest:request
-                              placeholderImage:placeholderImage
-                                       success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
-                                           
-                                           self.infoCardImage.image = image;
-                                           [self.infoCardImage setNeedsLayout];
-                                           
-                                       } failure:nil];
+        // Configure the cell...
+        SMMovieSimilar *thisMovie;
         
+        
+        
+
+        
+        
+        if (thisMovie.title == NULL) {
+            
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No Suggestions :(" message:@"Calling similar movies from the Rotten Tomatoes API returned no results... Continue on! Like some movies!" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+            
+            [alert show];
+            
+            [self choseDislike];
+
+            
+        } else {
+            
+        
+        thisMovie = (SMMovieSimilar*)similarMovieObjectsArray[self.currentSuggestedMovieIndex];
+
+        infoCardMovieRating.text = thisMovie.mpaa_rating;
+        infoCardMovieName.text = thisMovie.title;
+        
+        NSURL *thisMoviePosterURL = thisMovie.moviePosterURL;
+        
+            
+        [ApplicationDelegate.networkEngine imageAtURL:thisMoviePosterURL completionHandler:^(UIImage *fetchedImage, NSURL *fetchedURL, BOOL isInCache) {
+            
+            NSLog(@"thisMoviePosterURL: %@", [thisMoviePosterURL absoluteString]);
+            if(thisMoviePosterURL == fetchedURL)
+            {
+                NSLog(@"set imageView poster: %@", [thisMoviePosterURL absoluteString]);
+                infoCardImage.image = fetchedImage;
+            }
+            
+        } errorHandler:^(MKNetworkOperation *completedOperation, NSError *error) {
+            //code
+        }];
+        
+        }
+
     }
+    
 }
 
 - (void) setUpNextMovie {
-    if (self.currentMovieIndex + 1 < self.movies.count) {
+    if (self.currentMovieIndex + 1 < movieObjectsArray.count) {
         self.currentMovieIndex++;
+        if (_haventSeenButtonPressedBool == YES) {
+            _haventSeenButtonPressedBool = NO;
+        }
         [self queryForCurrentMovieIndex];
     } else {
-        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No more movies" message:@"You're done!" delegate:nil cancelButtonTitle:@"ok" otherButtonTitles: nil];
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Movie Recommendations!" message:@"Great job! We collected information on what mpaa rating you are inclined to as well as what time length of movies is best for you. This is a list of Box Office Movies that fit your viewing habits. To change the time interval, and get more reults, click the info button." delegate:nil cancelButtonTitle:@"ok" otherButtonTitles: nil];
         [alert show];
+        UIStoryboard *sb = [UIStoryboard storyboardWithName:@"Main" bundle:nil];
+        UIViewController *vc = [sb instantiateViewControllerWithIdentifier:@"tableViewController"];
+        vc.modalTransitionStyle = UIModalTransitionStyleFlipHorizontal;
+        [self presentViewController:vc animated:YES completion:NULL];
     }
 }
 
